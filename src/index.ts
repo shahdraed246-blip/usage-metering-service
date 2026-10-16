@@ -5,6 +5,7 @@ import { AppError } from "./errors.js";
 import { accountRoutes } from "./routes/accounts.js";
 import { userRoutes } from "./routes/users.js";
 import { planRoutes } from "./routes/plans.js";
+import { consumeRoutes } from "./routes/consume.js";
 const app = Fastify({ logger: true });
 
 // One consistent error shape: { error: { code, message, details? } }
@@ -37,6 +38,7 @@ app.get("/health", async () => {
 await app.register(accountRoutes);
 await app.register(userRoutes);
 await app.register(planRoutes);
+await app.register(consumeRoutes);
 await runMigrations();
 
 const port = Number(process.env.PORT ?? 3000);
