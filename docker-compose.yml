@@ -23,5 +23,14 @@ services:
       db:
         condition: service_healthy
 
+  client:
+    build: ./client
+    environment:
+      API_URL: http://api:3000
+      PORT: "8080"
+    ports: ["8080:8080"]
+    depends_on:
+      - api
+
 volumes:
   pgdata:
