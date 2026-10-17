@@ -1,0 +1,71 @@
+--- t=3s
+active|-|-|1
+--- t=6s
+active|-|-|1
+--- t=9s
+active|-|-|1
+--- t=12s
+active|-|-|1
+--- t=15s
+active|-|-|1
+--- t=18s
+idle in transaction|Client|ClientRead|15
+active|-|-|2
+active|Client|ClientRead|1
+active|IO|WALSync|1
+--- t=21s
+idle in transaction|Client|ClientRead|11
+active|-|-|3
+active|IO|WALSync|1
+active|Lock|transactionid|1
+active|LWLock|WALWrite|1
+--- t=24s
+idle in transaction|Client|ClientRead|10
+active|Lock|transactionid|3
+idle in transaction|-|-|2
+active|IO|WALSync|1
+active|-|-|1
+active|LWLock|WALWrite|1
+active|Client|ClientRead|1
+--- t=27s
+idle in transaction|Client|ClientRead|11
+active|-|-|3
+active|Client|ClientRead|1
+active|IO|WALSync|1
+active|Lock|transactionid|1
+idle in transaction|-|-|1
+--- t=30s
+active|Lock|tuple|17
+idle in transaction|Client|ClientRead|2
+active|-|-|1
+active|Lock|transactionid|1
+--- t=33s
+active|Lock|tuple|17
+active|-|-|2
+active|Lock|transactionid|1
+idle in transaction|Client|ClientRead|1
+--- t=36s
+active|Lock|tuple|18
+active|-|-|1
+active|Lock|transactionid|1
+idle in transaction|Client|ClientRead|1
+--- t=39s
+active|Lock|tuple|18
+active|-|-|1
+active|IO|WALSync|1
+active|Lock|transactionid|1
+--- t=42s
+active|Lock|tuple|16
+active|Lock|transactionid|2
+idle in transaction|Client|ClientRead|2
+active|-|-|1
+--- t=45s
+active|Lock|tuple|18
+active|-|-|1
+active|Client|ClientRead|1
+active|Lock|transactionid|1
+--- t=48s
+active|Lock|tuple|17
+active|-|-|1
+active|Lock|transactionid|1
+idle in transaction|Client|ClientRead|1
