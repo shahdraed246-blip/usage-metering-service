@@ -65,6 +65,7 @@ async function run(title, targets, unitsFn, expectedUserUsed) {
       },
     ],
   });
+  await new Promise((r) => setTimeout(r, 2000)); // let in-flight requests finish before reading totals
   const v = await verify(targets, expectedUserUsed);
   const row = {
     title,
