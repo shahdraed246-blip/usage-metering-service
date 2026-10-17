@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import { pool } from "./db/pool.js";
 import { AppError } from "./errors.js";
 import { accountRoutes } from "./routes/accounts.js";
@@ -12,7 +12,7 @@ export async function buildApp(options: { logger?: boolean } = {}) {
   const app = Fastify({ logger: options.logger ?? true });
 
   // One consistent error shape: { error: { code, message, details? } }
-  app.setErrorHandler((err, req, reply) => {
+  app.setErrorHandler((err: FastifyError, req, reply) => {
     if (err instanceof AppError) {
       return reply.code(err.status).send({
         error: { code: err.code, message: err.message, details: err.details },

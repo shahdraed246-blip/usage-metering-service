@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo: Document Processor</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 920px; margin: 24px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { margin-bottom: 4px; }
+  .sub { color: #666; margin-top: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 16px 0; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+  .card h3 { margin: 0 0 6px; }
+  .bar { background: #eee; height: 8px; border-radius: 4px; margin: 6px 0 10px; }
+  .bar div { background: #2f7d5b; height: 100%; border-radius: 4px; }
+  .row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  input, select, button { font: inherit; padding: 6px 8px; }
+  input { width: 80px; }
+  button { cursor: pointer; }
+  #result { padding: 12px; border-radius: 8px; margin: 12px 0; min-height: 24px; background: #f4f4f4; }
+  #result.ok { background: #e3f4ea; }
+  #result.no { background: #fde8e8; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td, th { border-bottom: 1px solid #eee; padding: 6px; text-align: left; }
+  .tag { font-size: 12px; background: #eee; border-radius: 4px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+  <h1>Document Processor (demo client)</h1>
+  <p class="sub">A fake app that calls the metering service with its API key. "Processing a document" costs units.</p>
+
+  <div id="result">Process a document to see the decision here.</div>
+  <div id="account"></div>
+  <div class="grid" id="users"></div>
+
+  <h3>Recent requests</h3>
+  <table><thead><tr><th>Request</th><th>User</th><th>Units</th><th>Decision</th></tr></thead><tbody id="history"></tbody></table>
+
+  <p><button id="reset">Reset demo</button></p>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function post(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body || {}) });
+  return r.json();
+}
+
+function level(l) {
+  const pct = l.monthlyAllowance ? Math.min(100, (l.used / l.monthlyAllowance) * 100) : 100;
+  return `<div>${l.used} / ${l.monthlyAllowance} used &middot; <b>${l.remaining}</b> remaining &middot; max ${l.maxPerRequest} per request</div>
+          <div class="bar"><div style="width:${pct}%"></div></div>`;
+}
+
+function options(names, current) {
+  return names.map((n) => `<option ${n === current ? "selected" : ""}>${esc(n)}</option>`).join("");
+}
+
+function render(s) {
+  const a = s.usage.account;
+  $("account").innerHTML = `<div class="card"><h3>Account (shared) <span class="tag">${esc(a.plan.name)}</span></h3>
+    ${level(a)}
+    <div class="row"><select id="acct-plan">${options(["Demo Account", "Starter", "Pro"], a.plan.name)}</select>
+    <button data-act="switch-account">Switch account plan</button></div></div>`;
+
+  $("users").innerHTML = s.usage.users.map((u) => `<div class="card"><h3>${esc(u.externalId)} <span class="tag">${esc(u.plan.name)}</span></h3>
+    ${level(u)}
+    <div class="row"><input type="number" min="1" value="10" id="units-${esc(u.externalId)}">
+    <button data-act="consume" data-user="${esc(u.externalId)}">Process document</button></div>
+    <div class="row"><select id="plan-${esc(u.externalId)}">${options(["Basic", "Premium"], u.plan.name)}</select>
+    <button data-act="switch-user" data-user="${esc(u.externalId)}">Switch plan</button></div></div>`).join("");
+
+  $("history").innerHTML = s.history.map((h) => `<tr><td>${esc(h.requestId.slice(0, 8))}</td><td>${esc(h.userId)}</td><td>${h.units}</td>
+    <td>${h.accepted ? "accepted" : "rejected by " + esc(h.reason.by) + " (" + esc(h.reason.rule) + ")"}</td></tr>`).join("");
+}
+
+async function refresh() {
+  render(await (await fetch("/api/state")).json());
+}
+
+function showDecision(r) {
+  const el = $("result");
+  if (r.error) { el.className = ""; el.textContent = "Error: " + (r.error.message || r.error); return; }
+  el.className = r.accepted ? "ok" : "no";
+  el.textContent = r.accepted
+    ? `Accepted: ${r.user.externalId} used ${r.units} units. User remaining ${r.user.remaining}, account remaining ${r.account.remaining}.`
+    : `Rejected (${r.units} units): blocked by the ${r.reason.by}'s ${r.reason.rule === "max_per_request" ? "per-request limit" : "monthly allowance"}. User remaining ${r.user.remaining}, account remaining ${r.account.remaining}.`;
+}
+
+document.addEventListener("click", async (e) => {
+  const act = e.target.dataset.act;
+  if (!act) return;
+  const user = e.target.dataset.user;
+  if (act === "consume") showDecision(await post("/api/consume", { userId: user, units: $("units-" + user).value }));
+  if (act === "switch-user") await post("/api/switch", { type: "user", userId: user, plan: $("plan-" + user).value });
+  if (act === "switch-account") await post("/api/switch", { type: "account", plan: $("acct-plan").value });
+  await refresh();
+});
+
+$("reset").onclick = async () => { await post("/api/reset"); $("result").className = ""; $("result").textContent = "Demo reset."; await refresh(); };
+refresh();
+</script>
+</body>
+</html>
