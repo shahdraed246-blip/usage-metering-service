@@ -205,7 +205,7 @@ Migrations are plain SQL files in `migrations/`, applied in order at startup (gu
 4. Evaluate the rules in memory. If accepted, one statement updates both counters and inserts the request. If rejected, insert the request only.
 5. Commit.
 
-Because the account counter is shared by design, requests of one account cannot run in parallel; different accounts do not block each other. Correctness comes from the database (row locks, transactions and the unique constraint), not from application memory, so it holds with several API instances.
+Because the account counter is shared by design, requests of one account cannot run in parallel; different accounts do not block each other. Correctness comes from the database (row locks, transactions and the unique constraint), not from application memory, so it should also hold with several API instances, but I only tested it with one API process (many concurrent database connections).
 
 ### Code organization
 
