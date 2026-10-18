@@ -7,7 +7,7 @@ Stack: TypeScript (Fastify), PostgreSQL, Docker Compose. One service and one dat
 
 ## Quick start
 
-Requirements: Docker with Docker Compose.
+Requirements: Docker with Docker Compose. To run the tests and the load tests from your machine you also need Node.js 20 or newer (developed on Node 22), npm and curl; `npm install` also brings autocannon, the load test tool.
 
 ```bash
 docker compose up --build
@@ -239,6 +239,10 @@ Tools are in `scripts/` and results in `perf/`.
 docker compose up -d db api
 npm run loadtest                 # three scenarios, writes perf/results.md
 bash scripts/bench.sh <label>    # same on a fresh database, saved as perf/results-<label>.md
+# bench.sh runs "docker compose down -v": it deletes the database volume (all data)
+
+# While a load test runs, in a second terminal, sample what Postgres connections wait on
+for i in $(seq 1 16); do docker compose exec -T db psql -U app -d metering -Atc "SELECT state, coalesce(wait_event_type,'-'), coalesce(wait_event,'-'), count(*) FROM pg_stat_activity WHERE datname='metering' AND state<>'idle' GROUP BY 1,2,3 ORDER BY 4 DESC"; sleep 3; done
 ```
 
 Scenarios (autocannon, 50 connections, 15 s each, every request is a `consume`):
@@ -284,3 +288,4 @@ Raw numbers: `perf/results-old-1.md`, `results-new-2.md`, `results-old-3.md`, `r
 - `GET /usage` computes `remaining` against today's plans, even for past months.
 - The demo client keeps its state in memory and creates a new account on every start.
 - Load results come from one laptop with the database, API, client and load generator on the same machine, so they show relative effects, not production capacity.
+- Only the two required rule types (monthly allowance, maximum per request) are implemented; no additional rules.
